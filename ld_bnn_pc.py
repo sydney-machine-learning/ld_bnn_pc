@@ -228,7 +228,7 @@ class MCMC:
         sigma_squared = 25
         nu_1 = 0
         nu_2 = 0
- 
+
 
         sigma_diagmat = np.zeros((w_size, w_size))  # for Equation 9 in Ref [Chandra_ICONIP2017]
         np.fill_diagonal(sigma_diagmat, step_w)
@@ -263,7 +263,7 @@ class MCMC:
 
             # print(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat),multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat))
 
-            diff_prop =  np.log(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat)  - np.log(multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat)))
+            diff_prop =  np.log(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat))  - np.log(multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat))
 
             eta_pro = eta + np.random.normal(0, step_eta, 1)
             tau_pro = math.exp(eta_pro)
@@ -357,19 +357,19 @@ def main():
     filetest = open('Results/test.txt', 'r')
     filestdtr = open('Results/std_tr.txt','r')
     filestdts = open('Results/std_ts.txt', 'r')
-    
+
     train_accs = np.loadtxt(filetrain)
     test_accs = np.loadtxt(filetest)
 
     train_stds = np.loadtxt(filestdtr)
     test_stds = np.loadtxt(filestdts)
-    
+
     filetrain.close()
     filetest.close()
     filestdtr.close()
     filestdts.close()
-    
-    
+
+
 
     if x == 3:
         w_limit =  0.02
@@ -426,7 +426,7 @@ def main():
 
         ytestdata = testdata[:, input[problem]:]
         ytraindata = traindata[:, input[problem]:]
-        
+
         train_acc = []
         test_acc = []
 
@@ -436,28 +436,28 @@ def main():
                 if np.allclose(fx[index],ytraindata[index],atol = 0.2):
                     count += 1
             train_acc.append(float(count)/fx.shape[0]*100)
-        
+
         for fx in fx_test:
             count = 0
             for index in range(fx.shape[0]):
                 if np.allclose(fx[index],ytestdata[index],atol = 0.5):
                     count += 1
             test_acc.append(float(count)/fx.shape[0]*100)
-       
+
         train_acc = np.array(train_acc[int(burnin):])
         train_std = np.std(train_acc[int(burnin):])
- 
+
         test_acc = np.array(test_acc[int(burnin):])
         test_std = np.std(test_acc[int(burnin):])
 
-        train_acc_mu = train_acc.mean() 
-        test_acc_mu = test_acc.mean()      
-    
+        train_acc_mu = train_acc.mean()
+        test_acc_mu = test_acc.mean()
+
         train_accs[problem] = train_acc_mu
         test_accs[problem] = test_acc_mu
         train_stds[problem] = train_std
         test_stds[problem] = test_std
-         
+
         testResults = np.c_[ytestdata, fx_mu, fx_high, fx_low]
 
         trainResults = np.c_[ytraindata, fx_mu_tr, fx_high_tr, fx_low_tr]
@@ -470,12 +470,12 @@ def main():
             fil.write(rmse)
 
     n_groups = len(filenames)
-    fig, ax = plt.subplots()  
+    fig, ax = plt.subplots()
     index = np.arange(n_groups)
     bar_width = 0.2
     opacity = 0.8
     capsize = 3
-    
+
     filetrain = open('Results/train.txt', 'w+')
     filetest = open('Results/test.txt', 'w+')
     filestdtr = open('Results/std_tr.txt','w+')
@@ -490,8 +490,8 @@ def main():
     filetest.close()
     filestdtr.close()
     filestdts.close()
-   
-    print(train_accs) 
+
+    print(train_accs)
     plt.bar(index + float(bar_width)/2, train_accs, bar_width,
                     alpha = opacity,
                     error_kw = dict(elinewidth=1, ecolor='r'),
