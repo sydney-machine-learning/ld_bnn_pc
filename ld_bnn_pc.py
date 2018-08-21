@@ -153,6 +153,13 @@ class MCMC:
         self.testdata = testdata
         # ----------------
 
+    def softmax(self, fx):
+        ex = np.exp(fx)
+        sum_ex = np.sum(ex, axis=1)
+        sum_ex = np.multiply(np.ones(ex.shape), sum_ex[:, np.newaxis])
+        prob = np.divide(ex, sum_ex)
+        return prob
+
     def rmse(self, predictions, targets):
         return np.sqrt(((predictions - targets) ** 2).mean())
 
@@ -160,8 +167,26 @@ class MCMC:
         y = data[:, self.topology[0]:]
         fx = neuralnet.evaluate_proposal(data, w)
         rmse = self.rmse(fx, y)
-        loss = -0.5 * np.log(2 * math.pi * tausq) - 0.5 * np.square(y - fx) / tausq
-        return [np.sum(loss), fx, rmse]
+        prob = self.softmax(fx)
+        # print prob.shape
+        # loss = np.sum(-0.5 * np.log(2 * math.pi * tausq) - 0.5 * np.square(y - fx) / tausq)
+        loss = 0
+        for i in range(y.shape[0]):
+            for j in range(y.shape[1]):
+                if y[i, j] == 1:
+                    loss += np.log(prob[i, j] + 0.0001)
+
+        out = np.argmax(fx, axis=1)
+        y_out = np.argmax(y, axis=1)
+        count = 0
+        for i in range(y_out.shape[0]):
+            if out[i] == y_out[i]:
+                count += 1
+        acc = float(count) / y_out.shape[0] * 100
+        # print count
+        # loss = np.log(np.sum(np.multiply(prob, y), axis=1))
+        # print np.sum(loss)
+        return [loss, fx, rmse]
 
     def prior_likelihood(self, sigma_squared, nu_1, nu_2, w, tausq):
         h = self.topology[1]  # number hidden neurons
@@ -256,43 +281,27 @@ class MCMC:
 
         for i in range(samples - 1):
             w_gd = neuralnet.langevin_gradient(self.traindata, w.copy(), self.sgd_depth) # Eq 8
-            # print(sum(w_gd))
             w_proposal = w_gd  + np.random.normal(0, step_w, w_size) # Eq 7
-
             w_prop_gd = neuralnet.langevin_gradient(self.traindata, w_proposal.copy(), self.sgd_depth)
-
             # print(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat),multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat))
-
-            diff_prop =  np.log(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat))  - np.log(multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat))
-
+            diff_prop =  np.log(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat)  - np.log(multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat)))
             eta_pro = eta + np.random.normal(0, step_eta, 1)
             tau_pro = math.exp(eta_pro)
-
             [likelihood_proposal, pred_train, rmsetrain] = self.likelihood_func(neuralnet, self.traindata, w_proposal,
                                                                                 tau_pro)
             [likelihood_ignore, pred_test, rmsetest] = self.likelihood_func(neuralnet, self.testdata, w_proposal,
                                                                             tau_pro)
-
             # likelihood_ignore  refers to parameter that will not be used in the alg.
-
             prior_prop = self.prior_likelihood(sigma_squared, nu_1, nu_2, w_proposal,
                                                tau_pro)  # takes care of the gradients
-
-
             diff_prior = prior_prop - prior_current
             diff_likelihood = likelihood_proposal - likelihood
             diff = min(700, diff_prior + diff_likelihood + diff_prop)
-
             # print()
             # print(diff, i )
             mh_prob = min(1, math.exp(diff))
             # print(mh_prob)
-
-
-
-
             u = random.uniform(0, 1)
-
             if u < mh_prob:
                 # Update position
                 # print    i, ' is accepted sample'
@@ -301,23 +310,17 @@ class MCMC:
                 prior_current = prior_prop
                 w = w_proposal
                 eta = eta_pro
-
-
                 # print  likelihood, prior_current, diff_prop, rmsetrain, rmsetest, w, 'accepted'
                 #print w_proposal, 'w_proposal'
                 #print w_gd, 'w_gd'
-
                 #print w_prop_gd, 'w_prop_gd'
-
                 pos_w[i + 1,] = w_proposal
                 pos_tau[i + 1,] = tau_pro
                 fxtrain_samples[i + 1,] = pred_train
                 fxtest_samples[i + 1,] = pred_test
                 rmse_train[i + 1,] = rmsetrain
                 rmse_test[i + 1,] = rmsetest
-
                 #plt.plot(x_train, pred_train)
-
 
             else:
                 pos_w[i + 1,] = pos_w[i,]
@@ -406,6 +409,7 @@ def main():
 
         print("fx shape:"+str(fx_test.shape))
         print("fx_train shape:"+ str(fx_train.shape))
+        print("\n")
 
         fx_mu = fx_test.mean(axis=0)
         fx_high = np.percentile(fx_test, 95, axis=0)
