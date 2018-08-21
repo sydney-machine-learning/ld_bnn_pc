@@ -256,7 +256,7 @@ class MCMC:
 
         for i in range(samples - 1):
             w_gd = neuralnet.langevin_gradient(self.traindata, w.copy(), self.sgd_depth) # Eq 8
-            print(sum(w_gd))
+            # print(sum(w_gd))
             w_proposal = w_gd  + np.random.normal(0, step_w, w_size) # Eq 7
 
             w_prop_gd = neuralnet.langevin_gradient(self.traindata, w_proposal.copy(), self.sgd_depth)
@@ -302,8 +302,7 @@ class MCMC:
                 w = w_proposal
                 eta = eta_pro
 
-                elapsed_time = ":".join(covert_time(int(time.time()-start)))
-                # sys.stdout.write('\r' + file + ' : ' + str("{:.2f}".format(float(i) / (samples - 1) * 100)) + '% complete....'+" time elapsed: " + elapsed_time)
+
                 # print  likelihood, prior_current, diff_prop, rmsetrain, rmsetest, w, 'accepted'
                 #print w_proposal, 'w_proposal'
                 #print w_gd, 'w_gd'
@@ -328,10 +327,13 @@ class MCMC:
                 rmse_train[i + 1,] = rmse_train[i,]
                 rmse_test[i + 1,] = rmse_test[i,]
 
+            elapsed_time = ":".join(covert_time(int(time.time()-start)))
+            sys.stdout.write('\r' + file + ' : ' + str("{:.2f}".format(float(i) / (samples - 1) * 100)) + '% complete....'+" time elapsed: " + elapsed_time)
+
                 # print i, 'rejected and retained'
-        # sys.stdout.write('\r' + file + ' : 100% ..... Total Time: ' + ":".join(covert_time(int(time.time()-start))))
-        # print naccept, ' num accepted'
-        # print naccept / (samples * 1.0), '% was accepted'
+        sys.stdout.write('\r' + file + ' : 100% ..... Total Time: ' + ":".join(covert_time(int(time.time()-start))))
+        print naccept, ' num accepted'
+        print naccept / (samples * 1.0), '% was accepted'
         accept_ratio = naccept / (samples * 1.0) * 100
 
         # plt.title("Plot of Accepted Proposals")
@@ -378,7 +380,7 @@ def main():
         #w_limit =  0.02
         #tau_limit = 0.1
 
-    for problem in []:
+    for problem in problemlist:
 
         #if os.path.isfile("Results/"+filenames[problem]+"_rmse.txt"):
         #    print filenames[problem]
